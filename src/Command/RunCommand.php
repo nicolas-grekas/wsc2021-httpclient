@@ -9,6 +9,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[AsCommand(
     name: 'app:run',
@@ -16,28 +17,22 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 class RunCommand extends Command
 {
-    protected function configure(): void
-    {
-        $this
-            ->addArgument('arg1', InputArgument::OPTIONAL, 'Argument description')
-            ->addOption('option1', null, InputOption::VALUE_NONE, 'Option description')
-        ;
+    public function __construct(
+        private HttpClientInterface $client,
+    ) {
+        parent::__construct();
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $arg1 = $input->getArgument('arg1');
+        $start = microtime(true);
 
-        if ($arg1) {
-            $io->note(sprintf('You passed an argument: %s', $arg1));
-        }
+        $response = $this->client->request('GET', 'https://symfony.com/all-versions.json');
 
-        if ($input->getOption('option1')) {
-            // ...
-        }
+        dump($response->toArray());
 
-        $io->success('You have a new command! Now make it your own! Pass --help to see your options.');
+        $io->note(sprintf('in %.3fms', 1000 * (microtime(true) - $start)));
 
         return Command::SUCCESS;
     }
