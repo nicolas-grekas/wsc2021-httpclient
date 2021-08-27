@@ -42,7 +42,10 @@ class RunCommand extends Command
     {
         $size = 0;
         for ($i = 0; $i < 379; ++$i) {
-            $response = $this->client->request('GET', "https://http2.akamai.com/demo/tile-$i.png");
+            $responses[] = $this->client->request('GET', "https://http2.akamai.com/demo/tile-$i.png");
+        }
+
+        foreach ($responses as $response) {
             $size += $response->getHeaders()['content-length'][0];
         }
 
