@@ -28,12 +28,24 @@ class RunCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $start = microtime(true);
 
-        $response = $this->client->request('GET', 'https://symfony.com/all-versions.json');
-
-        dump($response->toArray());
+        $this->http2demo($io);
 
         $io->note(sprintf('in %.3fms', 1000 * (microtime(true) - $start)));
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * @see https://http2.akamai.com/demo/
+     */
+    private function http2demo(SymfonyStyle $io)
+    {
+        $size = 0;
+        for ($i = 0; $i < 379; ++$i) {
+            $response = $this->client->request('GET', "https://http2.akamai.com/demo/tile-$i.png");
+            $size += $response->getHeaders()['content-length'][0];
+        }
+
+        $io->write(sprintf('Total size is <info>%d</> bytes.', $size));
     }
 }
