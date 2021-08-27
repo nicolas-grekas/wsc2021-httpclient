@@ -42,14 +42,18 @@ class RunCommand extends Command
     {
         $size = 0;
         for ($i = 0; $i < 379; ++$i) {
-            $responses[] = $this->client->request('GET', "https://http2.akamai.com/demo/tile-$i.png");
+            $responses[] = $this->client->request('GET', "https://http2.akamai.com/demo/tile-$i.png", ['user_data' => $i]);
         }
 
+        $order = [];
         foreach ($this->client->stream($responses) as $response => $chunk) {
             if ($chunk->isFirst()) {
                 $size += $response->getHeaders()['content-length'][0];
+                $order[] = $response->getInfo('user_data');
             }
         }
+
+        dump($order);
 
         $io->write(sprintf('Total size is <info>%d</> bytes.', $size));
     }
