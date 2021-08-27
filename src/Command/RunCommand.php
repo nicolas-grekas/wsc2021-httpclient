@@ -78,6 +78,8 @@ class RunCommand extends Command
             $progressBar->setMessage(sprintf('%dkb/s', $response->getInfo('speed_download') / 1024));
             $progressBar->setProgressCharacter(self::BAR[++$step % 8]);
             $progressBar->advance();
+
+            $response->getInfo('pause_handler')(0.1);
         }
 
         $progressBar->finish();
