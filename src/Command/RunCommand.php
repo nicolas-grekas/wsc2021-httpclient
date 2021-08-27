@@ -45,8 +45,10 @@ class RunCommand extends Command
             $responses[] = $this->client->request('GET', "https://http2.akamai.com/demo/tile-$i.png");
         }
 
-        foreach ($responses as $response) {
-            $size += $response->getHeaders()['content-length'][0];
+        foreach ($this->client->stream($responses) as $response => $chunk) {
+            if ($chunk->isFirst()) {
+                $size += $response->getHeaders()['content-length'][0];
+            }
         }
 
         $io->write(sprintf('Total size is <info>%d</> bytes.', $size));
