@@ -4,6 +4,7 @@ namespace App\Command;
 
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -28,7 +29,7 @@ class RunCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $start = microtime(true);
 
-        $this->http2demo($io);
+        $this->streamDemo($io);
 
         $io->note(sprintf('in %.3fms', 1000 * (microtime(true) - $start)));
 
@@ -56,5 +57,14 @@ class RunCommand extends Command
         dump($order);
 
         $io->write(sprintf('Total size is <info>%d</> bytes.', $size));
+    }
+
+    private function streamDemo(SymfonyStyle $io)
+    {
+        $response = $this->client->request('GET', 'http://releases.ubuntu.com/18.04.1/ubuntu-18.04.1-desktop-amd64.iso');
+
+        foreach ($this->client->stream($response) as $chunk) {
+            dump($response->getInfo('speed_download'));
+        }
     }
 }
