@@ -18,6 +18,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 )]
 class RunCommand extends Command
 {
+    private const BAR = ['⠏', '⠛', '⠹', '⢸', '⣰', '⣤', '⣆', '⡇'];
+
     public function __construct(
         private HttpClientInterface $client,
     ) {
@@ -63,8 +65,21 @@ class RunCommand extends Command
     {
         $response = $this->client->request('GET', 'http://releases.ubuntu.com/18.04.1/ubuntu-18.04.1-desktop-amd64.iso');
 
+        $progressBar = $io->createProgressBar();
+        $progressBar->setFormat('%bar%  %message%');
+        $progressBar->setBarCharacter('✔');
+        $progressBar->setMessage('Hello');
+        $progressBar->setBarWidth(1);
+        $progressBar->start();
+
+        $step = 0;
+
         foreach ($this->client->stream($response) as $chunk) {
-            dump($response->getInfo('speed_download'));
+            $progressBar->setMessage(sprintf('%dkb/s', $response->getInfo('speed_download') / 1024));
+            $progressBar->setProgressCharacter(self::BAR[++$step % 8]);
+            $progressBar->advance();
         }
+
+        $progressBar->finish();
     }
 }
