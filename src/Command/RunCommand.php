@@ -63,7 +63,13 @@ class RunCommand extends Command
 
     private function streamDemo(SymfonyStyle $io)
     {
-        $response = $this->client->request('GET', 'http://releases.ubuntu.com/18.04.1/ubuntu-18.04.1-desktop-amd64.iso');
+        $output = fopen('ubuntu-18.04.1-desktop-amd64.iso', 'a');
+        $response = $this->client->request('GET', 'http://releases.ubuntu.com/18.04.1/ubuntu-18.04.1-desktop-amd64.iso', [
+            'buffer' => $output,
+            'headers' => [
+                'Range' => fstat($output)['size'].'-',
+            ],
+        ]);
 
         $progressBar = $io->createProgressBar();
         $progressBar->setFormat('%bar%  %message%');
@@ -73,14 +79,11 @@ class RunCommand extends Command
         $progressBar->start();
 
         $step = 0;
-        $output = fopen('ubuntu-18.04.1-desktop-amd64.iso', 'w');
 
         foreach ($this->client->stream($response) as $chunk) {
             $progressBar->setMessage(sprintf('%dkb/s', $response->getInfo('speed_download') / 1024));
             $progressBar->setProgressCharacter(self::BAR[++$step % 8]);
             $progressBar->advance();
-
-            fwrite($output, $chunk->getContent());
 
             $response->getInfo('pause_handler')(0.1);
         }
