@@ -80,12 +80,21 @@ class RunCommand extends Command
 
         $step = 0;
 
-        foreach ($this->client->stream($response) as $chunk) {
-            $progressBar->setMessage(sprintf('%dkb/s', $response->getInfo('speed_download') / 1024));
-            $progressBar->setProgressCharacter(self::BAR[++$step % 8]);
-            $progressBar->advance();
+        while (true) {
+            foreach ($this->client->stream($response, 0.05) as $chunk) {
+                $progressBar->setMessage(sprintf('%dkb/s', $response->getInfo('speed_download') / 1024));
+                $progressBar->setProgressCharacter(self::BAR[++$step % 8]);
+                $progressBar->advance();
 
-            $response->getInfo('pause_handler')(0.1);
+                if ($chunk->isTimeout()) {
+                    continue 2;
+                }
+                if ($chunk->isLast()) {
+                    break 2;
+                }
+
+                $response->getInfo('pause_handler')(0.1);
+            }
         }
 
         $progressBar->finish();
