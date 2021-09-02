@@ -23,6 +23,7 @@ class RunCommand extends Command
     public function __construct(
         private HttpClientInterface $client,
     ) {
+        $this->client = $this->client->withOptions(['base_uri' => 'https://repo.packagist.org/']);
         parent::__construct();
     }
 
@@ -31,7 +32,35 @@ class RunCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $start = microtime(true);
 
-        $this->streamDemo($io);
+        $packages = $this->client->request('GET', 'packages.json')->toArray();
+
+        $providers = [];
+
+        foreach ($packages['provider-includes'] as $link => $hash) {
+            $providers[] = $this->client->request('GET', str_replace('%hash%', $hash['sha256'], $link));
+        }
+
+        $allPackages = [];
+        foreach ($providers as $provider) {
+            foreach ($provider->toArray()['providers'] as $packageName => $hash) {
+                $allPackages[$packageName] = sprintf('p2/%s.json', $packageName);
+            }
+        }
+
+        while ($packagesBatch = array_splice($allPackages, -500)) {
+            $responses = [];
+            foreach ($packagesBatch as $packageName => $url) {
+                $responses[$url] = $this->client->request('GET', $url);
+            }
+
+            foreach ($responses as $url => $response) {
+                if (200 !== $response->getStatusCode()) {
+                    echo 4;
+                } else {
+                    echo '.';
+                }
+            }
+        }
 
         $io->note(sprintf('in %.3fms', 1000 * (microtime(true) - $start)));
 
