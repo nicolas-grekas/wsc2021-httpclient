@@ -15,7 +15,6 @@ class PackagistApi
         ]));
     }
 
-
     public function getAllPackages(): \Generator
     {
         $packages = $this->client->request('GET', 'packages.json')->toArray();
@@ -26,11 +25,20 @@ class PackagistApi
             $providers[] = $this->client->request('GET', str_replace('%hash%', $hash['sha256'], $link));
         }
 
+        $scheduledPackages = [];
+
         foreach ($providers as $provider) {
             foreach ($provider->toArray()['providers'] as $packageName => $hash) {
-                yield $this->getPackage($packageName);
+                $scheduledPackages[] = $this->getPackage($packageName);
+
+                if (count($scheduledPackages) >= 500) {
+                    yield from $scheduledPackages;
+                    $scheduledPackages = [];
+                }
             }
         }
+
+        yield from $scheduledPackages;
     }
 
     public function getPackage(string $name)
@@ -38,6 +46,6 @@ class PackagistApi
         $url = sprintf('p/%s.json', $name);
         $response = $this->client->request('GET', $url);
 
-        return new Package($name, $response->toArray());
+        return new Package($name, $response);
     }
 }
