@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use App\PackagistApi;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
@@ -10,6 +11,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\HttpClient\Exception\TransportException;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[AsCommand(
@@ -21,9 +24,8 @@ class RunCommand extends Command
     private const BAR = ['⠏', '⠛', '⠹', '⢸', '⣰', '⣤', '⣆', '⡇'];
 
     public function __construct(
-        private HttpClientInterface $client,
+        private PackagistApi $packagistApi,
     ) {
-        $this->client = $this->client->withOptions(['base_uri' => 'https://repo.packagist.org/']);
         parent::__construct();
     }
 
@@ -32,34 +34,8 @@ class RunCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $start = microtime(true);
 
-        $packages = $this->client->request('GET', 'packages.json')->toArray();
-
-        $providers = [];
-
-        foreach ($packages['provider-includes'] as $link => $hash) {
-            $providers[] = $this->client->request('GET', str_replace('%hash%', $hash['sha256'], $link));
-        }
-
-        $allPackages = [];
-        foreach ($providers as $provider) {
-            foreach ($provider->toArray()['providers'] as $packageName => $hash) {
-                $allPackages[$packageName] = sprintf('p2/%s.json', $packageName);
-            }
-        }
-
-        while ($packagesBatch = array_splice($allPackages, -500)) {
-            $responses = [];
-            foreach ($packagesBatch as $packageName => $url) {
-                $responses[$url] = $this->client->request('GET', $url);
-            }
-
-            foreach ($responses as $url => $response) {
-                if (200 !== $response->getStatusCode()) {
-                    echo 4;
-                } else {
-                    echo '.';
-                }
-            }
+        foreach ($this->packagistApi->getAllPackages() as $package) {
+            echo '.';
         }
 
         $io->note(sprintf('in %.3fms', 1000 * (microtime(true) - $start)));
